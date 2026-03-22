@@ -1,0 +1,47 @@
+name: MacPastie
+options:
+  bundleIdPrefix: com.akang
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+
+targets:
+  MacPastie:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: .
+        excludes:
+          - "project.yml"
+          - "*.xcodeproj/**"
+          - "*.entitlements"
+          - "DerivedData/**"
+    resources:
+      - path: qrcode.jpg
+    info:
+      path: Info.plist
+      properties:
+        LSUIElement: true
+        NSAppleEventsUsageDescription: "Mac贴贴需要辅助功能权限来移动和调整其他应用的窗口大小。"
+        CFBundleDisplayName: Mac贴贴
+    entitlements:
+      path: MacPastie.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.automation.apple-events: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.akang.macpastie
+        PRODUCT_NAME: Mac贴贴
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        # 禁用沙盒（Accessibility 控制窗口必须）
+        ENABLE_APP_SANDBOX: NO
+    dependencies:
+      - sdk: Carbon.framework
+      - sdk: ApplicationServices.framework
+      - sdk: ServiceManagement.framework
