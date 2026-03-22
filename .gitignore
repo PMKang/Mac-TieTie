@@ -45,15 +45,7 @@ dist/
 *.swo
 
 # Internal docs (not for public repo)
-PRD.md
-RETROSPECTIVE.md
-TROUBLESHOOTING.md
-CHANGELOG.md
-CODEX_HANDOFF.md
-DEV_PROCESS.md
-spec_coding_reflection.md
-session_*.md
-content_plan_*.md
+summaryDoc/
 backend/
 qrcode.jpg
 screenshots/
