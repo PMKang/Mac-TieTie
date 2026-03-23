@@ -1,18 +1,17 @@
 # Mac贴贴 (MacPastie)
 
-> macOS 菜单栏窗口管理工具，16 种吸附位置 + 全局热键，完全免费。
+> macOS 菜单栏窗口管理工具，15 种吸附位置 + 全局热键，贴窗功能免费。
 
 ![macOS](https://img.shields.io/badge/macOS-13.0%2B-blue)
-![Version](https://img.shields.io/badge/version-1.0-green)
+![Version](https://img.shields.io/badge/version-0.2-green)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
 
 ## 功能
 
-- **16 种窗口位置**：左/右/上/下半屏、四角、左右三等分、左右 2/3、全屏、居中
+- **15 种窗口位置**：左/右/上/下半屏、四角、左右三等分、左右 2/3、全屏、居中
 - **全局热键**：默认 `⌃⌥` 前缀，不抢焦点直接触发
-- **多显示器**：支持移到下一屏（`⌃⌥⌘ →`）
 - **菜单栏常驻**：不占 Dock，轻量后台运行
 
 | 操作 | 默认快捷键 |
@@ -32,7 +31,6 @@
 | 右三等分 | ⌃⌥ G |
 | 左 2/3 | ⌃⌥ E |
 | 右 2/3 | ⌃⌥ T |
-| 移到下一屏 | ⌃⌥⌘ → |
 
 ---
 
@@ -40,7 +38,7 @@
 
 ### 方式一：下载安装包（推荐）
 
-1. 前往 [Releases](../../releases) 页面，下载最新版 `Mac贴贴_v1.0.zip`
+1. 前往 [Releases](../../releases) 页面，下载最新版 `Mac贴贴_v0.2.zip`
 2. 解压，将 `Mac贴贴.app` 拖入 `/Applications`
 3. 双击打开，macOS 会提示「无法验证开发者」，按以下任意一种方式处理：
 
@@ -119,7 +117,6 @@ MacPastie/
 
 **已知待修复：**
 - [ ] 快捷键自定义（UI 已有，逻辑待完善）
-- [ ] 多显示器跨屏移动优化
 
 ---
 
