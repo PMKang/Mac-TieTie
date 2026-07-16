@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_VERSION="1.0.0"
+APP_VERSION="1.0.1"
 APP_NAME="阿康的 Mac 贴贴"
 SOURCE_APP="$ROOT_DIR/dist/$APP_NAME.app"
 RELEASE_DIR="$ROOT_DIR/release"
