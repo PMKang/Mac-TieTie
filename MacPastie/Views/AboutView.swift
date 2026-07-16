@@ -8,13 +8,13 @@ import SwiftUI
 
 struct AboutView: View {
     private let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
+    private let voiceInputURL = URL(string: "https://github.com/PMKang/akang-ai-voice-input/releases/latest")!
 
     private let changelog: [(String, [String])] = [
-        ("V0.2", [
-            "新增关于面板（版本 + 更新日志 + 公众号二维码）",
-            "修复设置/关于窗口点不开的问题",
-            "移除下一屏功能（单显示器场景无效）",
-            "补充首次安装 Gatekeeper 解除说明",
+        ("V1.0", [
+            "品牌升级为「阿康的 Mac 贴贴」",
+            "聚焦贴窗体验，移除未完成的截图与资讯入口",
+            "优化菜单栏面板与产品推荐方式",
         ]),
         ("V0.1", [
             "首个可用版本",
@@ -26,34 +26,30 @@ struct AboutView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 顶部：App 信息 + 二维码
+            // 顶部：App 信息
             HStack(spacing: 16) {
-                if let img = qrcodeImage {
-                    Image(nsImage: img)
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(width: 90, height: 90)
-                        .cornerRadius(8)
-                }
+                Image(nsImage: NSApplication.shared.applicationIconImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 72, height: 72)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Mac贴贴")
+                    Text("阿康的 Mac 贴贴")
                         .font(.title3.bold())
-                    Text("V\(version) · 窗口管理工具")
+                    Text("V\(version) · macOS 贴窗工具")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("作者：akang")
+                    Text("把窗口放到刚刚好的位置。")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Divider()
-                    Text("微信扫码关注「阿康AI探索号」")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Text("AI资讯 · 金融科技 · PM踩坑 · AI养虾🦐")
-                        .font(.caption2)
-                        .foregroundColor(.accentColor)
                 }
+                Spacer()
             }
             .padding(16)
+
+            Divider()
+
+            recommendedProduct
+                .padding(16)
 
             Divider()
 
@@ -90,19 +86,70 @@ struct AboutView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 12)
                 }
-                .frame(height: 160)
+                .frame(height: 145)
             }
 
+            Divider()
+
+            officialAccountFooter
+                .padding(14)
         }
-        .frame(width: 340)
+        .frame(width: 430)
+    }
+
+    private var recommendedProduct: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("阿康的好用工具")
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 12) {
+                Image(systemName: "waveform.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.tint)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("阿康的 AI 语音输入法")
+                        .font(.subheadline.weight(.semibold))
+                    Text("自然说话，直接成文。按需了解，不捆绑安装。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("了解一下") {
+                    NSWorkspace.shared.open(voiceInputURL)
+                }
+            }
+            .padding(12)
+            .background(Color(NSColor.controlBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+    }
+
+    private var officialAccountFooter: some View {
+        HStack(spacing: 12) {
+            if let img = qrcodeImage {
+                Image(nsImage: img)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("阿康 AI 探索号")
+                    .font(.subheadline.weight(.medium))
+                Text("开发记录、AI 工具和产品实测")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
     }
 
     private var qrcodeImage: NSImage? {
-        let devPath = "/Users/liangkang/PycharmProjects/Mactietie_MacPastie/qrcode.jpg"
-        if FileManager.default.fileExists(atPath: devPath) {
-            return NSImage(contentsOfFile: devPath)
-        }
-        let bundlePath = (Bundle.main.bundlePath as NSString).appendingPathComponent("qrcode.jpg")
-        return NSImage(contentsOfFile: bundlePath)
+        guard let url = Bundle.main.url(forResource: "qrcode", withExtension: "jpg") else { return nil }
+        return NSImage(contentsOf: url)
     }
 }

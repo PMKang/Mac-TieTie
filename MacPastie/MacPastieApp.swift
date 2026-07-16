@@ -1,20 +1,15 @@
-//
-//  MacPastieApp.swift
-//  MacPastie - macOS 窗口管理工具
-//  Author: akang
-//
+import AppKit
 
-import SwiftUI
-
+/// 纯菜单栏应用使用 AppKit 主循环，确保 Finder、登录启动和终端启动
+/// 都执行同一条 AppDelegate 生命周期。
 @main
-struct MacPastieApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-
-    var body: some Scene {
-        // 纯菜单栏 App，所有 UI 由 AppDelegate 管理
-        // Settings scene 留空避免与自定义 NSWindow 冲突
-        Settings {
-            EmptyView()
-        }
+enum MacPastieApp {
+    static func main() {
+        let application = NSApplication.shared
+        let delegate = AppDelegate()
+        application.delegate = delegate
+        application.finishLaunching()
+        delegate.start()
+        application.run()
     }
 }

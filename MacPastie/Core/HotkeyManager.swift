@@ -9,6 +9,7 @@
 
 import AppKit
 import Carbon
+import OSLog
 
 // 热键动作标识
 enum HotkeyAction: String, CaseIterable {
@@ -84,6 +85,8 @@ class HotkeyManager {
     static let shared = HotkeyManager()
     private init() {}
 
+    private let logger = Logger(subsystem: "com.akang.macpastie", category: "Hotkeys")
+
     private var registeredHotkeys: [HotkeyAction: EventHotKeyRef] = [:]
     private var eventHandler: EventHandlerRef?
 
@@ -95,19 +98,30 @@ class HotkeyManager {
 
     // MARK: - 注册所有热键
 
-    func registerAll() {
+    @discardableResult
+    func registerAll() -> Bool {
         unregisterAll()
-        installEventHandler()
+        let handlerStatus = installEventHandlerIfNeeded()
+        guard handlerStatus == noErr else {
+            logger.error("Failed to install hotkey event handler, status=\(handlerStatus)")
+            return false
+        }
 
         let current = configs
-        var count = 0
+        var successfulCount = 0
         for action in HotkeyAction.allCases {
             if let config = current[action] {
-                register(action: action, config: config)
-                count += 1
+                let status = register(action: action, config: config)
+                if status == noErr {
+                    successfulCount += 1
+                } else {
+                    logger.error("Failed to register \(action.rawValue, privacy: .public), status=\(status)")
+                }
             }
         }
-        print("[hotkey] registerAll: registered \(count) hotkeys, trusted=\(AXIsProcessTrusted())")
+        let expectedCount = current.count
+        logger.info("Registered \(successfulCount)/\(expectedCount) hotkeys, trusted=\(AXIsProcessTrusted())")
+        return successfulCount == expectedCount
     }
 
     func unregisterAll() {
@@ -119,7 +133,7 @@ class HotkeyManager {
 
     // MARK: - 单个注册
 
-    private func register(action: HotkeyAction, config: HotkeyConfig) {
+    private func register(action: HotkeyAction, config: HotkeyConfig) -> OSStatus {
         let id = EventHotKeyID(signature: OSType(fourCharCode("MPST")), id: actionID(for: action))
         var ref: EventHotKeyRef?
         let status = RegisterEventHotKey(config.keyCode, config.modifiers, id,
@@ -127,13 +141,18 @@ class HotkeyManager {
         if status == noErr, let ref = ref {
             registeredHotkeys[action] = ref
         }
+        return status
     }
 
     // MARK: - Carbon 事件处理
     // InstallApplicationEventHandler 是 C 宏，Swift 不可直接调用。
     // 等效展开：InstallEventHandler(GetApplicationEventTarget(), handler, ...)
 
-    private func installEventHandler() {
+    private func installEventHandlerIfNeeded() -> OSStatus {
+        if eventHandler != nil {
+            return noErr
+        }
+
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
                                       eventKind: UInt32(kEventHotKeyPressed))
         // 非捕获闭包（访问静态属性不算捕获），可作为 C 函数指针传入
@@ -147,17 +166,13 @@ class HotkeyManager {
             HotkeyManager.shared.handleHotkey(id: hotkeyID.id)
             return noErr
         }
-        InstallEventHandler(GetApplicationEventTarget(), callback,
-                            1, &eventType,
-                            nil, &eventHandler)
+        return InstallEventHandler(GetApplicationEventTarget(), callback,
+                                   1, &eventType,
+                                   nil, &eventHandler)
     }
 
     private func handleHotkey(id: UInt32) {
-        guard let action = action(forID: id) else {
-            print("[hotkey] handleHotkey: unknown id=\(id)")
-            return
-        }
-        print("[hotkey] handleHotkey: action=\(action)")
+        guard let action = action(forID: id) else { return }
         WindowManager.shared.snapFrontWindow(to: action.snapPosition)
     }
 

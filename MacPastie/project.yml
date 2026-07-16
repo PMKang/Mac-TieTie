@@ -18,14 +18,20 @@ targets:
           - "*.xcodeproj/**"
           - "*.entitlements"
           - "DerivedData/**"
+          - "miniprogram_qrcode.jpg"
     resources:
       - path: qrcode.jpg
     info:
       path: Info.plist
       properties:
         LSUIElement: true
-        NSAppleEventsUsageDescription: "Mac贴贴需要辅助功能权限来移动和调整其他应用的窗口大小。"
-        CFBundleDisplayName: Mac贴贴
+        LSMultipleInstancesProhibited: true
+        LSApplicationCategoryType: public.app-category.productivity
+        NSPrincipalClass: NSApplication
+        NSAppleEventsUsageDescription: "阿康的 Mac 贴贴需要辅助功能权限来移动和调整其他应用的窗口大小。"
+        CFBundleDisplayName: 阿康的 Mac 贴贴
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     entitlements:
       path: MacPastie.entitlements
       properties:
@@ -34,7 +40,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.akang.macpastie
-        PRODUCT_NAME: Mac贴贴
+        PRODUCT_NAME: 阿康的 Mac 贴贴
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "13.0"
         CODE_SIGN_STYLE: Automatic

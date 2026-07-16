@@ -1,9 +1,9 @@
-# Mac贴贴 (MacPastie)
+# 阿康的 Mac 贴贴
 
-> macOS 菜单栏窗口管理工具，15 种吸附位置 + 全局热键，贴窗功能免费。
+> 把窗口放到刚刚好的位置。一款聚焦贴窗的 macOS 菜单栏工具。
 
 ![macOS](https://img.shields.io/badge/macOS-13.0%2B-blue)
-![Version](https://img.shields.io/badge/version-0.2-green)
+![Version](https://img.shields.io/badge/version-1.0.0-green)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
@@ -38,13 +38,13 @@
 
 ### 方式一：下载安装包（推荐）
 
-1. 前往 [Releases](../../releases) 页面，下载最新版 `Mac贴贴_v0.2.zip`
-2. 解压，将 `Mac贴贴.app` 拖入 `/Applications`
+1. 前往 [Releases](../../releases) 页面，下载 `AkangMacTieTie-v1.0.0-macos.zip`
+2. 解压，将 `阿康的 Mac 贴贴.app` 拖入 `/Applications`
 3. 双击打开，macOS 会提示「无法验证开发者」，按以下任意一种方式处理：
 
 **方式 A（推荐，图形界面）**
 
-双击 App → 弹出"无法打开"提示 → 打开「系统设置 → 隐私与安全性」→ 往下滚，找到「已阻止使用"Mac贴贴"」→ 点「仍然打开」→ 再次确认 → 打开成功
+双击 App → 弹出"无法打开"提示 → 打开「系统设置 → 隐私与安全性」→ 往下滚，找到「已阻止使用"阿康的 Mac 贴贴"」→ 点「仍然打开」→ 再次确认 → 打开成功
 
 **方式 B（右键打开）**
 
@@ -53,13 +53,15 @@
 **方式 C（终端命令）**
 
 ```bash
-xattr -cr /Applications/Mac贴贴.app
+xattr -cr "/Applications/阿康的 Mac 贴贴.app"
 ```
 然后双击打开。
 
 4. 首次打开后，授权辅助功能权限即可使用
 
 > ⚠️ 本应用使用 ad-hoc 签名（无 Apple 开发者证书），以上提示均属正常现象，代码完全开源可审查。
+
+> 首次启动只会主动提示一次辅助功能授权。后续可在“设置 → 通用”查看状态并主动打开系统设置。
 
 ### 方式二：源码编译
 
@@ -80,12 +82,20 @@ xcodegen generate
 open MacPastie.xcodeproj
 ```
 
+### 本地正式构建
+
+```bash
+./script/package_release.sh
+```
+
+构建产物位于 `release/AkangMacTieTie-v1.0.0-macos.zip`。发布脚本使用固定 Bundle ID 和 designated requirement 进行本地签名，以减少升级后辅助功能授权失效。
+
 ---
 
 ## 使用
 
 1. 打开 App，菜单栏出现 `⊞` 图标
-2. 首次使用需授权**辅助功能**权限：系统提示时点「打开系统设置」→ 勾选 Mac贴贴
+2. 首次使用需授权**辅助功能**权限：系统提示时点「打开系统设置」→ 勾选阿康的 Mac 贴贴
 3. 切换到任意窗口，按快捷键即可吸附
 
 ---

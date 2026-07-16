@@ -131,9 +131,27 @@ private struct HotkeyRow: View {
 struct GeneralPrefsView: View {
     @State private var launchAtLogin = UserDefaults.standard.bool(forKey: "launchAtLogin")
     @State private var launchAtLoginError: String? = nil
+    @State private var accessibilityGranted = WindowManager.shared.hasAccessibilityPermission()
 
     var body: some View {
         Form {
+            LabeledContent("辅助功能权限") {
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(accessibilityGranted ? Color.green : Color.orange)
+                        .frame(width: 8, height: 8)
+                    Text(accessibilityGranted ? "已开启" : "未开启")
+                        .foregroundColor(.secondary)
+                    if !accessibilityGranted {
+                        Button("打开系统设置") {
+                            WindowManager.shared.openAccessibilitySettings()
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
             Toggle("登录时启动", isOn: $launchAtLogin)
                 .onChange(of: launchAtLogin) { val in
                     updateLaunchAtLogin(enabled: val)
@@ -158,6 +176,12 @@ struct GeneralPrefsView: View {
             }
         }
         .padding()
+        .onAppear {
+            accessibilityGranted = WindowManager.shared.hasAccessibilityPermission()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            accessibilityGranted = WindowManager.shared.hasAccessibilityPermission()
+        }
     }
 
     private func updateLaunchAtLogin(enabled: Bool) {
