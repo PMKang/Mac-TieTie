@@ -25,7 +25,7 @@
 	<key>LSMultipleInstancesProhibited</key>
 	<true/>
 	<key>LSUIElement</key>
-	<true/>
+	<false/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>阿康的 Mac 贴贴需要辅助功能权限来移动和调整其他应用的窗口大小。</string>
 	<key>NSPrincipalClass</key>

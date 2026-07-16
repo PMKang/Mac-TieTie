@@ -6,6 +6,16 @@ options:
   xcodeVersion: "15.0"
   generateEmptyDirectories: true
 
+schemes:
+  MacPastie:
+    build:
+      targets:
+        MacPastie: all
+        MacPastieTests: [test]
+    test:
+      targets:
+        - MacPastieTests
+
 targets:
   MacPastie:
     type: application
@@ -15,16 +25,20 @@ targets:
       - path: .
         excludes:
           - "project.yml"
+          - "Tests/**"
           - "*.xcodeproj/**"
           - "*.entitlements"
+          - "build/**"
           - "DerivedData/**"
           - "miniprogram_qrcode.jpg"
     resources:
       - path: qrcode.jpg
+      - path: video_qrcode.jpg
+      - path: social_qrcodes.png
     info:
       path: Info.plist
       properties:
-        LSUIElement: true
+        LSUIElement: false
         LSMultipleInstancesProhibited: true
         LSApplicationCategoryType: public.app-category.productivity
         NSPrincipalClass: NSApplication
@@ -40,6 +54,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.akang.macpastie
+        PRODUCT_MODULE_NAME: MacPastie
         PRODUCT_NAME: 阿康的 Mac 贴贴
         MARKETING_VERSION: 1.0.1
         CURRENT_PROJECT_VERSION: 1
@@ -47,9 +62,28 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "13.0"
         CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: YES
+        # XCTest needs the app executable itself as its host. Xcode's debug
+        # dylib launcher does not export the Swift module symbols to it.
+        ENABLE_DEBUG_DYLIB: NO
         # 禁用沙盒（Accessibility 控制窗口必须）
         ENABLE_APP_SANDBOX: NO
     dependencies:
       - sdk: Carbon.framework
       - sdk: ApplicationServices.framework
       - sdk: ServiceManagement.framework
+
+  MacPastieTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        # The test bundle imports the app module, so it must load the app
+        # executable as its host.  A hostless bundle compiles but leaves all
+        # app symbols unresolved at link time.
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/阿康的 Mac 贴贴.app/Contents/MacOS/阿康的 Mac 贴贴"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+    dependencies:
+      - target: MacPastie

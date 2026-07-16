@@ -9,6 +9,7 @@ import SwiftUI
 struct AboutView: View {
     private let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
     private let voiceInputURL = URL(string: "https://github.com/PMKang/akang-ai-voice-input/releases/latest")!
+    @State private var updateMessage: String?
 
     private let changelog: [(String, [String])] = [
         ("V1.0", [
@@ -93,6 +94,10 @@ struct AboutView: View {
 
             officialAccountFooter
                 .padding(14)
+
+            updateControls
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
         }
         .frame(width: 430)
     }
@@ -103,7 +108,7 @@ struct AboutView: View {
                 .font(.caption.bold())
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 Image(systemName: "waveform.circle.fill")
                     .font(.system(size: 28))
                     .foregroundStyle(.tint)
@@ -116,16 +121,44 @@ struct AboutView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Spacer()
+                Spacer(minLength: 12)
 
-                Button("了解一下") {
-                    NSWorkspace.shared.open(voiceInputURL)
+                VStack(alignment: .trailing) {
+                    Spacer(minLength: 0)
+                    Button("了解一下") {
+                        NSWorkspace.shared.open(voiceInputURL)
+                    }
+                    .controlSize(.small)
+                    Spacer(minLength: 0)
                 }
             }
             .padding(12)
             .background(Color(NSColor.controlBackgroundColor))
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
+    }
+
+    private var updateControls: some View {
+        VStack(alignment: .trailing, spacing: 5) {
+            Button("检查更新") {
+                let updater = UpdaterManager.shared
+                guard updater.isAvailable else {
+                    updateMessage = updater.unavailableMessage
+                    return
+                }
+                updateMessage = nil
+                updater.checkForUpdates()
+            }
+            .controlSize(.small)
+
+            if let updateMessage {
+                Text(updateMessage)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     private var officialAccountFooter: some View {

@@ -79,9 +79,24 @@ struct HotkeyConfig: Codable, Equatable {
             .center:           HotkeyConfig(keyCode: UInt32(kVK_ANSI_C),     modifiers: ctrlOpt),
         ]
     }()
+
+    static func isComplete(_ configs: [HotkeyAction: HotkeyConfig]) -> Bool {
+        configs.count == HotkeyAction.allCases.count && HotkeyAction.allCases.allSatisfy { configs[$0] != nil }
+    }
+
+    static func hasDuplicateShortcut(in configs: [HotkeyAction: HotkeyConfig]) -> Bool {
+        let shortcuts = configs.values.map { "\($0.keyCode):\($0.modifiers)" }
+        return Set(shortcuts).count != shortcuts.count
+    }
+
+    /// Keeps manually edited or legacy UserDefaults data from disabling startup hotkeys.
+    static func sanitized(_ configs: [HotkeyAction: HotkeyConfig]) -> [HotkeyAction: HotkeyConfig] {
+        guard isComplete(configs), !hasDuplicateShortcut(in: configs) else { return defaults }
+        return configs
+    }
 }
 
-class HotkeyManager {
+final class HotkeyManager: HotkeyRegistering {
     static let shared = HotkeyManager()
     private init() {}
 
@@ -100,28 +115,45 @@ class HotkeyManager {
 
     @discardableResult
     func registerAll() -> Bool {
+        switch registerAll(configs: configs) {
+        case .success:
+            return true
+        case let .failure(error):
+            logger.error("Failed to register hotkeys: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
+    /// Registers a complete configuration without persisting it. Any partial registration
+    /// is removed before reporting an error so callers can safely restore an older set.
+    func registerAll(configs: [HotkeyAction: HotkeyConfig]) -> Result<Void, HotkeyRegistrationError> {
+        if let error = Self.registrationError(for: configs) { return .failure(error) }
+
         unregisterAll()
         let handlerStatus = installEventHandlerIfNeeded()
         guard handlerStatus == noErr else {
             logger.error("Failed to install hotkey event handler, status=\(handlerStatus)")
-            return false
+            return .failure(.eventHandlerInstallationFailed(handlerStatus))
         }
 
-        let current = configs
-        var successfulCount = 0
         for action in HotkeyAction.allCases {
-            if let config = current[action] {
-                let status = register(action: action, config: config)
-                if status == noErr {
-                    successfulCount += 1
-                } else {
-                    logger.error("Failed to register \(action.rawValue, privacy: .public), status=\(status)")
-                }
+            guard let config = configs[action] else { continue }
+            let status = register(action: action, config: config)
+            guard status == noErr else {
+                logger.error("Failed to register \(action.rawValue, privacy: .public), status=\(status)")
+                unregisterAll()
+                return .failure(.registrationFailed(action, status))
             }
         }
-        let expectedCount = current.count
-        logger.info("Registered \(successfulCount)/\(expectedCount) hotkeys, trusted=\(AXIsProcessTrusted())")
-        return successfulCount == expectedCount
+        logger.info("Registered \(configs.count)/\(configs.count) hotkeys, trusted=\(AXIsProcessTrusted())")
+        return .success(())
+    }
+
+    /// Called before unregistering existing bindings, including when the app starts.
+    static func registrationError(for configs: [HotkeyAction: HotkeyConfig]) -> HotkeyRegistrationError? {
+        guard HotkeyConfig.isComplete(configs) else { return .invalidConfiguration }
+        guard !HotkeyConfig.hasDuplicateShortcut(in: configs) else { return .duplicateConfiguration }
+        return nil
     }
 
     func unregisterAll() {
@@ -201,7 +233,7 @@ class HotkeyManager {
                 result[action] = value
             }
         }
-        return result
+        return HotkeyConfig.sanitized(result)
     }
 
     private func saveConfigs(_ configs: [HotkeyAction: HotkeyConfig]) {

@@ -15,7 +15,7 @@ struct MenuPanelView: View {
 
             Divider()
 
-            SnapGridView()
+            SnapGridView(hotkeyStore: .shared)
                 .frame(height: 260)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -55,6 +55,14 @@ struct MenuPanelView: View {
 
     private var bottomBar: some View {
         HStack {
+            Button(action: openControlCenter) {
+                Label("控制中心", systemImage: "macwindow")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.secondary)
+            .font(.caption)
+
             Button(action: openPreferences) {
                 Label("设置", systemImage: "gearshape")
                     .labelStyle(.titleAndIcon)
@@ -66,16 +74,25 @@ struct MenuPanelView: View {
             Spacer()
 
             Button(action: showAbout) {
-                Image(systemName: "info.circle")
+                Label("关于", systemImage: "info.circle")
+                    .labelStyle(.titleAndIcon)
             }
             .buttonStyle(.plain)
             .foregroundColor(.secondary)
+            .font(.caption)
 
             Button(action: quit) {
                 Image(systemName: "power")
             }
             .buttonStyle(.plain)
             .foregroundColor(.secondary)
+        }
+    }
+
+    private func openControlCenter() {
+        closePopover()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            AppDelegate.shared?.openControlCenter()
         }
     }
 

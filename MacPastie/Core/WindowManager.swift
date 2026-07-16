@@ -28,9 +28,86 @@ enum SnapPosition: String, CaseIterable {
     case center      = "居中"
 }
 
+/// Pure target-selection policy. Accessibility calls live in `WindowManager`,
+/// while this policy makes the ownership rules directly unit-testable.
+enum WindowTargetSelectionPolicy {
+    enum Decision: Equatable {
+        /// A different application is frontmost, so its focused AX window is
+        /// always authoritative. A previous capture must not win here.
+        case useFrontmostExternal
+        /// MacPastie is frontmost (for example its control center or menu), so
+        /// the last valid external capture may continue to receive shortcuts.
+        case useCapturedTarget
+        /// No safe target remains. The caller must discard any stale capture.
+        case clearTarget
+    }
+
+    static func decision(
+        frontmostIsSelf: Bool,
+        hasFocusedExternalWindow: Bool,
+        hasValidCapturedTarget: Bool
+    ) -> Decision {
+        if !frontmostIsSelf {
+            return hasFocusedExternalWindow ? .useFrontmostExternal : .clearTarget
+        }
+        return hasValidCapturedTarget ? .useCapturedTarget : .clearTarget
+    }
+}
+
 class WindowManager {
     static let shared = WindowManager()
     private init() {}
+
+    /// The result is intentionally user-facing: control-center buttons need to
+    /// explain why no window moved instead of silently targeting this app.
+    enum SnapResult: Equatable {
+        case moved
+        case accessibilityPermissionRequired
+        case noControllableTarget
+    }
+
+    struct TargetStatus: Equatable {
+        let displayName: String
+        let processIdentifier: pid_t
+    }
+
+    /// The external AX window selected immediately before the control center
+    /// becomes key. Keeping the AX element is important: after activation,
+    /// `frontmostApplication` is MacPastie itself and is never a valid target.
+    private struct CapturedTarget {
+        let application: AXUIElement
+        let window: AXUIElement
+        let status: TargetStatus
+    }
+
+    private var capturedTarget: CapturedTarget?
+
+    enum CrossScreenDirection: String, CaseIterable, Identifiable {
+        case left = "左"
+        case right = "右"
+        case up = "上"
+        case down = "下"
+
+        var id: Self { self }
+
+        var symbolName: String {
+            switch self {
+            case .left: "arrow.left"
+            case .right: "arrow.right"
+            case .up: "arrow.up"
+            case .down: "arrow.down"
+            }
+        }
+
+        fileprivate var edgePosition: SnapPosition {
+            switch self {
+            case .left: .leftHalf
+            case .right: .rightHalf
+            case .up: .topHalf
+            case .down: .bottomHalf
+            }
+        }
+    }
 
     // 记录上次 snap 的动作和窗口实际落点（App min-width 约束可能导致落点≠理想目标）
     private var lastSnapAction: SnapPosition? = nil
@@ -44,13 +121,15 @@ class WindowManager {
 
     // MARK: - 核心：吸附窗口（含边缘触发跳屏）
 
-    func snapFrontWindow(to position: SnapPosition) {
-        guard hasAccessibilityPermission() else { return }
-        guard let currentScreen = getScreenContainingFrontWindow() else { return }
+    @discardableResult
+    func snapFrontWindow(to position: SnapPosition) -> SnapResult {
+        guard hasAccessibilityPermission() else { return .accessibilityPermissionRequired }
+        guard let target = resolvedTarget() else { return .noControllableTarget }
+        guard let currentScreen = getScreenContainingWindow(target.window) else { return .noControllableTarget }
 
         let targetFrame = calculateFrame(for: position, screen: currentScreen)
 
-        if let currentFrame = getFrontWindowFrame() {
+        if let currentFrame = getWindowFrame(target.window) {
             let byFrame = framesApproximatelyEqual(currentFrame, targetFrame)
 
             // byLastSnap：上次 snap 了同一个位置，且窗口没动（处理 App min-width 导致实际尺寸偏离目标）
@@ -84,16 +163,16 @@ class WindowManager {
                 print("[snap] JUMP → screen(\(Int(adjacentScreen.frame.minX)),\(Int(adjacentScreen.frame.minY))) \(Int(adjacentScreen.frame.width))x\(Int(adjacentScreen.frame.height))  landing=\(landingPosition.rawValue)")
                 print("[snap] JUMP   newFrame TL(\(Int(newFrame.minX)),\(Int(newFrame.maxY))) BR(\(Int(newFrame.maxX)),\(Int(newFrame.minY)))  size(\(Int(newFrame.width))x\(Int(newFrame.height)))")
                 print("[snap] JUMP   axOrigin(\(Int(newFrame.minX)),\(Int(primaryH - newFrame.maxY)))  primaryH=\(Int(primaryH))")
-                setFrontWindowFrame(newFrame, crossScreen: true)
+                setWindowFrame(target.window, newFrame, crossScreen: true)
                 lastSnapAction = landingPosition
                 lastSnapFrame = nil          // 立即清空，快速连按时走宽松路径
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    self.lastSnapFrame = self.getFrontWindowFrame()
+                    self.lastSnapFrame = self.getWindowFrame(target.window)
                     if let actual = self.lastSnapFrame {
                         print("[snap] POST-JUMP actual TL(\(Int(actual.minX)),\(Int(actual.maxY))) BR(\(Int(actual.maxX)),\(Int(actual.minY)))  size(\(Int(actual.width))x\(Int(actual.height)))")
                     }
                 }
-                return
+                return .moved
             }
 
             if approxEqual {
@@ -101,13 +180,50 @@ class WindowManager {
             }
         }
 
-        setFrontWindowFrame(targetFrame)
+        setWindowFrame(target.window, targetFrame)
         lastSnapAction = position
         lastSnapFrame = nil              // 立即清空，异步回填实际落点
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.lastSnapFrame = self.getFrontWindowFrame()
+            self.lastSnapFrame = self.getWindowFrame(target.window)
         }
+        return .moved
     }
+
+    /// Capture an external focused window before activating MacPastie's own
+    /// window. Calling this while our app is already frontmost deliberately
+    /// preserves the previous capture rather than replacing it with ourselves.
+    @discardableResult
+    func captureFrontmostTarget() -> TargetStatus? {
+        guard hasAccessibilityPermission() else { return currentTargetStatus }
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
+            clearCapturedTarget()
+            return nil
+        }
+
+        if frontmostApp.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+            return currentTargetStatus
+        }
+
+        guard let target = makeExternalTarget(for: frontmostApp) else {
+            clearCapturedTarget()
+            return nil
+        }
+        updateCapturedTarget(target)
+        return target.status
+    }
+
+    /// Clears a stale target and returns a displayable description only when
+    /// its AX window remains controllable.
+    var currentTargetStatus: TargetStatus? {
+        guard let target = capturedTarget else { return nil }
+        guard isValid(target) else {
+            clearCapturedTarget()
+            return nil
+        }
+        return target.status
+    }
+
+    var hasControllableTarget: Bool { currentTargetStatus != nil }
 
     // MARK: - 计算目标 Frame
 
@@ -145,8 +261,7 @@ class WindowManager {
 
     // crossScreen=true：pos→size→pos（跨屏必须先定位才能越过边界）
     // crossScreen=false：size→pos→size（同屏更稳定，避免字符网格 App 高度撑出屏幕）
-    private func setFrontWindowFrame(_ frame: CGRect, crossScreen: Bool = false) {
-        guard let window = getFrontWindow() else { return }
+    private func setWindowFrame(_ window: AXUIElement, _ frame: CGRect, crossScreen: Bool = false) {
 
         let screenHeight = NSScreen.screens.first?.frame.height ?? 0
         var axOrigin = CGPoint(x: frame.minX, y: screenHeight - frame.maxY)
@@ -179,20 +294,23 @@ class WindowManager {
 
     // MARK: - 读取前台窗口当前 Frame（NSScreen 坐标系）
 
-    private func getFrontWindowFrame() -> CGRect? {
-        guard let window = getFrontWindow() else { return nil }
+    private func getWindowFrame(_ window: AXUIElement) -> CGRect? {
 
         var posRef: CFTypeRef?
         AXUIElementCopyAttributeValue(window, kAXPositionAttribute as CFString, &posRef)
         var axPos = CGPoint.zero
-        guard let pv = posRef else { return nil }
-        AXValueGetValue(pv as! AXValue, .cgPoint, &axPos)
+        guard let pv = typedAXValue(posRef, expectedType: .cgPoint),
+              AXValueGetValue(pv, .cgPoint, &axPos) else {
+            return nil
+        }
 
         var sizeRef: CFTypeRef?
         AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &sizeRef)
         var axSize = CGSize.zero
-        guard let sv = sizeRef else { return nil }
-        AXValueGetValue(sv as! AXValue, .cgSize, &axSize)
+        guard let sv = typedAXValue(sizeRef, expectedType: .cgSize),
+              AXValueGetValue(sv, .cgSize, &axSize) else {
+            return nil
+        }
 
         let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
         return CGRect(x: axPos.x,
@@ -211,8 +329,8 @@ class WindowManager {
 
     // MARK: - 获取前台窗口所在屏幕
 
-    private func getScreenContainingFrontWindow() -> NSScreen? {
-        guard let frame = getFrontWindowFrame() else { return NSScreen.main }
+    private func getScreenContainingWindow(_ window: AXUIElement) -> NSScreen? {
+        guard let frame = getWindowFrame(window) else { return nil }
         let center = CGPoint(x: frame.midX, y: frame.midY)
         return NSScreen.screens.first { $0.frame.contains(center) } ?? NSScreen.main
     }
@@ -266,6 +384,18 @@ class WindowManager {
 
         guard let screen = bestScreen else { return nil }
         return (screen, bestLanding)
+    }
+
+    /// Reports directions that the same center-distance candidate algorithm used by
+    /// `snapFrontWindow(to:)` can currently resolve from the front window's screen.
+    /// This intentionally does not claim physical edge adjacency: displays are
+    /// classified by the relative positions of their centers.
+    func supportedCrossScreenDirections() -> [CrossScreenDirection] {
+        guard let target = resolvedTarget(),
+              let currentScreen = getScreenContainingWindow(target.window) else { return [] }
+        return CrossScreenDirection.allCases.filter {
+            findAdjacentScreenJump(for: $0.edgePosition, from: currentScreen) != nil
+        }
     }
 
     // MARK: - 位置边缘判断
@@ -328,14 +458,109 @@ class WindowManager {
         }
     }
 
-    // MARK: - 获取前台窗口
+    // MARK: - 目标窗口解析与验证
 
-    private func getFrontWindow() -> AXUIElement? {
-        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+    /// The policy is kept separate from AX calls so it can be unit tested and
+    /// so no call path can accidentally select MacPastie's own main window.
+    static func isEligibleExternalTarget(
+        frontmostPID: pid_t,
+        selfPID: pid_t = ProcessInfo.processInfo.processIdentifier,
+        hasFocusedWindow: Bool
+    ) -> Bool {
+        frontmostPID != selfPID && hasFocusedWindow
+    }
+
+    private func resolvedTarget() -> CapturedTarget? {
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
+            clearCapturedTarget()
+            return nil
+        }
+
+        let frontmostIsSelf = frontmostApp.processIdentifier == ProcessInfo.processInfo.processIdentifier
+        let frontmostTarget = frontmostIsSelf ? nil : makeExternalTarget(for: frontmostApp)
+        let validCapture = capturedTarget.flatMap { isValid($0) ? $0 : nil }
+
+        switch WindowTargetSelectionPolicy.decision(
+            frontmostIsSelf: frontmostIsSelf,
+            hasFocusedExternalWindow: frontmostTarget != nil,
+            hasValidCapturedTarget: validCapture != nil
+        ) {
+        case .useFrontmostExternal:
+            guard let target = frontmostTarget else {
+                clearCapturedTarget()
+                return nil
+            }
+            updateCapturedTarget(target)
+            return target
+        case .useCapturedTarget:
+            return validCapture
+        case .clearTarget:
+            clearCapturedTarget()
+            return nil
+        }
+    }
+
+    private func makeExternalTarget(for app: NSRunningApplication) -> CapturedTarget? {
+        guard app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return nil }
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
         var windowRef: CFTypeRef?
-        AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &windowRef)
-        return windowRef as! AXUIElement?
+        let error = AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &windowRef)
+        guard error == .success, let windowRef,
+              Self.isEligibleExternalTarget(frontmostPID: app.processIdentifier, hasFocusedWindow: true) else {
+            return nil
+        }
+        guard let window = typedAXUIElement(windowRef) else { return nil }
+        let target = CapturedTarget(
+            application: axApp,
+            window: window,
+            status: TargetStatus(
+                displayName: app.localizedName ?? "当前应用",
+                processIdentifier: app.processIdentifier
+            )
+        )
+        return isValid(target) ? target : nil
+    }
+
+    private func updateCapturedTarget(_ target: CapturedTarget) {
+        if let existing = capturedTarget,
+           existing.status.processIdentifier == target.status.processIdentifier,
+           CFEqual(existing.window, target.window) {
+            capturedTarget = target
+            return
+        }
+        capturedTarget = target
+        lastSnapAction = nil
+        lastSnapFrame = nil
+    }
+
+    private func clearCapturedTarget() {
+        capturedTarget = nil
+        lastSnapAction = nil
+        lastSnapFrame = nil
+    }
+
+    /// Accessibility returns untyped CF objects. Verify both the concrete CF
+    /// type and the encoded AX value kind before treating a response as a
+    /// point/size; this avoids assuming a malformed accessibility response.
+    private func typedAXValue(_ value: CFTypeRef?, expectedType: AXValueType) -> AXValue? {
+        guard let value,
+              CFGetTypeID(value) == AXValueGetTypeID() else {
+            return nil
+        }
+        let axValue = unsafeBitCast(value, to: AXValue.self)
+        return AXValueGetType(axValue) == expectedType ? axValue : nil
+    }
+
+    private func typedAXUIElement(_ value: CFTypeRef) -> AXUIElement? {
+        guard CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return unsafeBitCast(value, to: AXUIElement.self)
+    }
+
+    private func isValid(_ target: CapturedTarget) -> Bool {
+        guard target.status.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return false }
+        // Ask the window for both properties required by the snap operation.
+        // AX returns an error for a closed or no-longer-accessible window.
+        return getWindowFrame(target.window) != nil
     }
 
     // MARK: - 请求权限

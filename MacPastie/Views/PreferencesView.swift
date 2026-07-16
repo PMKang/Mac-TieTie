@@ -27,102 +27,24 @@ struct PreferencesView: View {
 
 // MARK: - 快捷键设置
 
+/// The former standalone settings window now points to the Dock control center,
+/// where recording and system registration are kept in one source of truth.
 struct HotkeyPrefsView: View {
-    @State private var configs: [HotkeyAction: HotkeyConfig] = HotkeyManager.shared.configs
-    @State private var recording: HotkeyAction? = nil
-
-    private let groups: [(String, [HotkeyAction])] = [
-        ("半屏", [.leftHalf, .rightHalf, .topHalf, .bottomHalf]),
-        ("四角", [.topLeft, .topRight, .bottomLeft, .bottomRight]),
-        ("三等分", [.leftThird, .centerThird, .rightThird]),
-        ("2/3 & 其他", [.leftTwoThirds, .rightTwoThirds, .fullscreen, .center]),
-    ]
-
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                ForEach(groups, id: \.0) { group in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(group.0)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.leading, 2)
-
-                        ForEach(group.1, id: \.self) { action in
-                            HotkeyRow(
-                                action: action,
-                                config: configs[action] ?? HotkeyConfig.defaults[action]!,
-                                isRecording: recording == action
-                            ) {
-                                recording = (recording == action) ? nil : action
-                            }
-                        }
-                    }
-                }
-
-                HStack {
-                    Image(systemName: "info.circle")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("快捷键自定义功能即将支持")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
+        VStack(alignment: .leading, spacing: 14) {
+            Label("快捷键配置已移至控制中心", systemImage: "command")
+                .font(.headline)
+            Text("在那里可以录制 15 个贴窗动作的快捷键，并在系统成功注册后立即应用。")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("打开快捷键配置") {
+                AppDelegate.shared?.openControlCenter(section: .shortcuts)
             }
-            .padding()
-        }
-    }
-}
-
-// MARK: - 单行快捷键
-
-private struct HotkeyRow: View {
-    let action: HotkeyAction
-    let config: HotkeyConfig
-    let isRecording: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        HStack {
-            Text(action.displayName)
-                .frame(width: 100, alignment: .leading)
+            .buttonStyle(.borderedProminent)
             Spacer()
-            Text(hotkeyString)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(6)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(isRecording ? Color.orange.opacity(0.05) : Color.clear)
-        .cornerRadius(6)
-    }
-
-    private var hotkeyString: String {
-        var s = ""
-        if config.modifiers & UInt32(controlKey) != 0 { s += "⌃" }
-        if config.modifiers & UInt32(optionKey)  != 0 { s += "⌥" }
-        if config.modifiers & UInt32(cmdKey)     != 0 { s += "⌘" }
-        if config.modifiers & UInt32(shiftKey)   != 0 { s += "⇧" }
-        return s + keyName(config.keyCode)
-    }
-
-    private func keyName(_ kc: UInt32) -> String {
-        let map: [UInt32: String] = [
-            UInt32(kVK_LeftArrow): "←", UInt32(kVK_RightArrow): "→",
-            UInt32(kVK_UpArrow): "↑",   UInt32(kVK_DownArrow): "↓",
-            UInt32(kVK_Return): "↩",
-            UInt32(kVK_ANSI_U): "U", UInt32(kVK_ANSI_I): "I",
-            UInt32(kVK_ANSI_J): "J", UInt32(kVK_ANSI_K): "K",
-            UInt32(kVK_ANSI_D): "D", UInt32(kVK_ANSI_F): "F",
-            UInt32(kVK_ANSI_G): "G", UInt32(kVK_ANSI_E): "E",
-            UInt32(kVK_ANSI_T): "T", UInt32(kVK_ANSI_C): "C",
-        ]
-        return map[kc] ?? "?"
+        .padding()
     }
 }
 
