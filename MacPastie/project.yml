@@ -32,6 +32,7 @@ targets:
           - "DerivedData/**"
           - "miniprogram_qrcode.jpg"
     resources:
+      - path: Assets.xcassets
       - path: qrcode.jpg
       - path: video_qrcode.jpg
       - path: social_qrcodes.png
@@ -56,8 +57,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.akang.macpastie
         PRODUCT_MODULE_NAME: MacPastie
         PRODUCT_NAME: 阿康的 Mac 贴贴
-        MARKETING_VERSION: 1.0.1
-        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 1.0.2
+        CURRENT_PROJECT_VERSION: 2
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "13.0"
         CODE_SIGN_STYLE: Automatic
