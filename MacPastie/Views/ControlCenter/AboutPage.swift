@@ -161,7 +161,7 @@ struct AboutPage: View {
                     .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("阿康的 Mac 贴贴")
+                    Text("Mac贴贴")
                         .font(.title2.weight(.semibold))
                     Text("一个由个人开发和维护的 macOS 窗口贴窗工具。")
                         .font(.subheadline)
@@ -212,7 +212,7 @@ struct AboutPage: View {
                 Label("打开 GitHub", systemImage: "arrow.up.right")
             }
             .buttonStyle(.borderedProminent)
-            .accessibilityHint("在浏览器打开阿康的 Mac 贴贴 GitHub 项目")
+            .accessibilityHint("在浏览器打开 Mac贴贴 GitHub 项目")
         }
         .padding(14)
         .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))

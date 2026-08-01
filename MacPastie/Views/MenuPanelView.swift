@@ -40,7 +40,7 @@ struct MenuPanelView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("阿康的 Mac 贴贴")
+                Text("Mac贴贴")
                     .font(.headline)
                 Text("把窗口放到刚刚好的位置")
                     .font(.caption)

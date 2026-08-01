@@ -21,7 +21,7 @@ struct SettingsPage: View {
                 accessibilityCard
                 launchAtLoginCard
 
-                Text("权限状态会在你从系统设置回到应用时自动刷新。阿康的 Mac 贴贴只在首次启动时主动请求一次辅助功能权限，之后不会反复弹出授权提醒。")
+                Text("权限状态会在你从系统设置回到应用时自动刷新。Mac贴贴只在首次启动时主动请求一次辅助功能权限，之后不会反复弹出授权提醒。")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -60,7 +60,7 @@ struct SettingsPage: View {
         SettingsCard(
             symbolName: "power",
             title: "登录时启动",
-            subtitle: "登录 Mac 后自动启动阿康的 Mac 贴贴，菜单栏与快捷键即可使用。"
+            subtitle: "登录 Mac 后自动启动 Mac贴贴，菜单栏与快捷键即可使用。"
         ) {
             Toggle("登录时启动", isOn: Binding(
                 get: { launchAtLoginEnabled },

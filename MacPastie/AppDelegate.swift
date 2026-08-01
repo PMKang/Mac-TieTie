@@ -28,7 +28,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard !didStart else { return }
         didStart = true
         AppDelegate.shared = self
-        ProcessInfo.processInfo.disableAutomaticTermination("阿康的 Mac 贴贴需要持续监听全局快捷键")
+        ProcessInfo.processInfo.disableAutomaticTermination("Mac贴贴需要持续监听全局快捷键")
 
         // 同时保留 Dock 与菜单栏入口：Dock 负责打开完整控制中心，菜单栏负责快速贴窗。
         NSApp.setActivationPolicy(.regular)
@@ -71,7 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "阿康的 Mac 贴贴")
+            button.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Mac贴贴")
             button.image?.isTemplate = true
             button.action = #selector(togglePopover)
             button.target = self
@@ -126,7 +126,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "阿康的 Mac 贴贴"
+        window.title = "Mac贴贴"
         window.minSize = NSSize(width: 860, height: 580)
         window.contentViewController = NSHostingController(rootView: ControlCenterView(initialSection: section))
         window.center()

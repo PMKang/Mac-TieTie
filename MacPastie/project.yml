@@ -43,8 +43,8 @@ targets:
         LSMultipleInstancesProhibited: true
         LSApplicationCategoryType: public.app-category.productivity
         NSPrincipalClass: NSApplication
-        NSAppleEventsUsageDescription: "阿康的 Mac 贴贴需要辅助功能权限来移动和调整其他应用的窗口大小。"
-        CFBundleDisplayName: 阿康的 Mac 贴贴
+        NSAppleEventsUsageDescription: "Mac贴贴需要辅助功能权限来移动和调整其他应用的窗口大小。"
+        CFBundleDisplayName: Mac贴贴
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
     entitlements:
@@ -56,7 +56,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.akang.macpastie
         PRODUCT_MODULE_NAME: MacPastie
-        PRODUCT_NAME: 阿康的 Mac 贴贴
+        PRODUCT_NAME: Mac贴贴
         MARKETING_VERSION: 1.0.2
         CURRENT_PROJECT_VERSION: 2
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -85,7 +85,7 @@ targets:
         # The test bundle imports the app module, so it must load the app
         # executable as its host.  A hostless bundle compiles but leaves all
         # app symbols unresolved at link time.
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/阿康的 Mac 贴贴.app/Contents/MacOS/阿康的 Mac 贴贴"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Mac贴贴.app/Contents/MacOS/Mac贴贴"
         BUNDLE_LOADER: "$(TEST_HOST)"
     dependencies:
       - target: MacPastie

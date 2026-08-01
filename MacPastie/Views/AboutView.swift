@@ -13,7 +13,7 @@ struct AboutView: View {
 
     private let changelog: [(String, [String])] = [
         ("V1.0", [
-            "品牌升级为「阿康的 Mac 贴贴」",
+            "品牌升级为「Mac贴贴」",
             "聚焦贴窗体验，移除未完成的截图与资讯入口",
             "优化菜单栏面板与产品推荐方式",
         ]),
@@ -34,7 +34,7 @@ struct AboutView: View {
                     .interpolation(.high)
                     .frame(width: 72, height: 72)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("阿康的 Mac 贴贴")
+                    Text("Mac贴贴")
                         .font(.title3.bold())
                     Text("V\(version) · macOS 贴窗工具")
                         .font(.caption)
